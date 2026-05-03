@@ -1,0 +1,4 @@
+# Chap'miam — storage/.htaccess
+# Bloque tout accès HTTP direct au stockage
+Order deny,allow
+Deny from all

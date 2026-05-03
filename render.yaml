@@ -1,0 +1,133 @@
+# =============================================================================
+# Chap'miam — render.yaml
+# Blueprint Render — Déploiement automatique
+# =============================================================================
+#
+# Ce fichier permet de déployer l'application sur Render en 1 clic.
+# Render lit automatiquement render.yaml depuis la racine du dépôt Git.
+#
+# UTILISATION :
+#   1. Pousser ce fichier sur GitHub/GitLab
+#   2. Render Dashboard → New → Blueprint → Sélectionner votre repo
+#   3. Render lit render.yaml et crée les services automatiquement
+#   4. Configurer les variables marquées "sync: false" dans le dashboard
+#
+# =============================================================================
+
+services:
+  # ── Application Web PHP ────────────────────────────────────────────────────
+  - type: web
+    name: chapmiam
+    runtime: docker
+    region: frankfurt          # europe-west (le plus proche de l'Afrique de l'Ouest)
+
+    # Source Docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+
+    # Plan (free = 512 Mo RAM, 0.1 vCPU, redémarre après inactivité)
+    plan: free
+    # Pour production : plan: starter (7$/mois, toujours actif)
+
+    # Port exposé par le container (Render injecte $PORT)
+    # Render gère automatiquement le PORT — ne pas hardcoder
+
+    # Variables d'environnement
+    envVars:
+      # ── Application ──────────────────────────────────────────────────────
+      - key: APP_ENV
+        value: production
+
+      - key: APP_DEBUG
+        value: "false"
+
+      - key: APP_URL
+        fromService:
+          type: web
+          name: chapmiam
+          property: host
+          # Render injecte automatiquement l'URL du service
+
+      - key: APP_KEY
+        generateValue: true    # Render génère une valeur sécurisée aléatoire
+
+      # ── Base de données ───────────────────────────────────────────────────
+      - key: DB_HOST
+        sync: false            # À configurer manuellement dans le dashboard
+
+      - key: DB_PORT
+        value: "3306"
+
+      - key: DB_NAME
+        sync: false
+
+      - key: DB_USER
+        sync: false
+
+      - key: DB_PASS
+        sync: false
+
+      - key: DB_SSL
+        value: "true"          # Recommandé pour les bases cloud
+
+      # ── Sessions ─────────────────────────────────────────────────────────
+      - key: SESSION_LIFETIME
+        value: "1800"
+
+      # ── Logs ─────────────────────────────────────────────────────────────
+      - key: LOG_LEVEL
+        value: warning
+
+      # ── Email ─────────────────────────────────────────────────────────────
+      - key: MAIL_HOST
+        value: smtp.gmail.com
+
+      - key: MAIL_PORT
+        value: "587"
+
+      - key: MAIL_ENCRYPTION
+        value: tls
+
+      - key: MAIL_USER
+        sync: false
+
+      - key: MAIL_PASS
+        sync: false
+
+      - key: MAIL_FROM
+        value: noreply@chapmiam.com
+
+      # ── Paiement ─────────────────────────────────────────────────────────
+      - key: CINETPAY_API_KEY
+        sync: false
+
+      - key: CINETPAY_SITE_ID
+        sync: false
+
+      - key: CINETPAY_ENV
+        value: PROD
+
+    # ── Health Check ─────────────────────────────────────────────────────────
+    healthCheckPath: /index.php?page=accueil
+
+    # ── Auto-Deploy ──────────────────────────────────────────────────────────
+    autoDeploy: true           # Redéploiement automatique sur push Git
+
+# =============================================================================
+# NOTE : Base de données
+#
+# Render ne propose pas MySQL natif. Options recommandées :
+#
+#   A) PlanetScale (MySQL compatible, plan gratuit) — RECOMMANDÉ
+#      → https://planetscale.com
+#      → Configurer DB_HOST, DB_USER, DB_PASS depuis PlanetScale
+#      → DB_SSL=true obligatoire
+#
+#   B) Railway (MySQL, plan gratuit limité)
+#      → https://railway.app
+#      → Récupérer DATABASE_URL depuis Railway
+#
+#   C) Aiven for MySQL (plan gratuit 1 mois)
+#      → https://aiven.io
+#
+# =============================================================================

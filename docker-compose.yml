@@ -1,0 +1,116 @@
+# =============================================================================
+# Chap'miam — docker-compose.yml
+# Environnement de développement local avec Docker
+# =============================================================================
+#
+# UTILISATION :
+#   docker-compose up -d              # Démarrer
+#   docker-compose logs -f app        # Voir les logs de l'app
+#   docker-compose down               # Arrêter
+#   docker-compose down -v            # Arrêter + supprimer les volumes
+#
+# ACCÈS :
+#   Application : http://localhost:8080
+#   PHPMyAdmin  : http://localhost:8081
+#
+# =============================================================================
+
+version: '3.8'
+
+services:
+
+  # ── Application PHP + Apache ────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chapmiam_app
+    ports:
+      - "8080:${PORT:-10000}"
+    environment:
+      # Simule l'environnement Render en local
+      PORT: ${PORT:-10000}
+      APP_ENV: development
+      APP_DEBUG: "true"
+      APP_URL: "http://localhost:8080"
+      APP_KEY: "${APP_KEY:-dev_key_local_changeme_32chars_ok}"
+      # Base de données (pointe vers le container MySQL)
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: "${DB_NAME:-chapmiam}"
+      DB_USER: "${DB_USER:-chapmiam_user}"
+      DB_PASS: "${DB_PASS:-chapmiam_pass_dev}"
+      DB_CHARSET: utf8mb4
+      DB_SSL: "false"
+      # Logs
+      LOG_LEVEL: debug
+      SESSION_LIFETIME: 1800
+    volumes:
+      # Hot reload du code source (développement)
+      - ./app:/var/www/html/app:ro
+      - ./public:/var/www/html/public:ro
+      # Logs persistants en local
+      - ./logs:/var/www/html/logs
+      - ./storage:/var/www/html/storage
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - chapmiam_net
+
+  # ── Base de données MySQL ───────────────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: chapmiam_db
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password_dev
+      MYSQL_DATABASE: "${DB_NAME:-chapmiam}"
+      MYSQL_USER: "${DB_USER:-chapmiam_user}"
+      MYSQL_PASSWORD: "${DB_PASS:-chapmiam_pass_dev}"
+    ports:
+      - "3306:3306"
+    volumes:
+      # Données MySQL persistantes
+      - mysql_data:/var/lib/mysql
+      # Initialisation automatique
+      - ./database/install.sql:/docker-entrypoint-initdb.d/01_install.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_password_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - chapmiam_net
+
+  # ── PHPMyAdmin (optionnel — admin DB en local) ─────────────────────────────
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: chapmiam_pma
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: "${DB_USER:-chapmiam_user}"
+      PMA_PASSWORD: "${DB_PASS:-chapmiam_pass_dev}"
+      UPLOAD_LIMIT: 64M
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - chapmiam_net
+    profiles:
+      - dev      # N'activer qu'avec : docker-compose --profile dev up
+
+# ── Volumes ──────────────────────────────────────────────────────────────────
+volumes:
+  mysql_data:
+    driver: local
+
+# ── Réseau ───────────────────────────────────────────────────────────────────
+networks:
+  chapmiam_net:
+    driver: bridge

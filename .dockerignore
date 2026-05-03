@@ -1,0 +1,74 @@
+# =============================================================================
+# Chap'miam — .dockerignore
+# Fichiers et dossiers exclus de l'image Docker
+# =============================================================================
+#
+# RÈGLE : inclure le MINIMUM nécessaire dans l'image.
+# Tout ce qui n'est pas listé en inclusion est exclu par les patterns ci-dessous.
+# =============================================================================
+
+# ── Fichiers secrets — JAMAIS dans l'image ────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.env
+
+# ── Logs et données runtime ───────────────────────────────────────────────────
+logs/
+logs/*.log
+logs/*.old
+logs/ratelimit/
+storage/ratelimit/
+
+# ── Dépendances locales ───────────────────────────────────────────────────────
+vendor/
+node_modules/
+composer.lock
+
+# ── Outils de développement ───────────────────────────────────────────────────
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# ── Fichiers de documentation ─────────────────────────────────────────────────
+*.md
+CHECKLIST_VERDICT_FINAL.md
+docs/
+README*
+
+# ── Fichiers de test ──────────────────────────────────────────────────────────
+tests/
+phpunit.xml
+.phpunit.result.cache
+coverage/
+
+# ── Fichiers d'IDE et système ─────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Fichiers de sauvegarde ────────────────────────────────────────────────────
+*.bak
+*.backup
+*.old
+*.sql.gz
+*.zip
+
+# ── Configuration locale Docker ───────────────────────────────────────────────
+docker-compose*.yml
+docker-compose*.yaml
+.dockerignore
+
+# ── Scripts de validation locale ─────────────────────────────────────────────
+scripts/
+
+# ── Fichiers temporaires PHP ─────────────────────────────────────────────────
+*.cache
+cache/
+tmp/

@@ -1,0 +1,4 @@
+# Chap'miam — logs/.htaccess
+# Bloque tout accès HTTP direct aux logs
+Order deny,allow
+Deny from all

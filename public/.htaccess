@@ -1,0 +1,119 @@
+# =============================================================================
+# Chap'miam — public/.htaccess — VERSION RENDER/DOCKER
+# =============================================================================
+#
+# DIFFÉRENCES vs version hébergement classique :
+#
+#   [CRITIQUE] La redirection HTTPS est SUPPRIMÉE ici.
+#     Raison : Render gère le HTTPS en amont via son reverse proxy Nginx.
+#     Le container Apache reçoit les requêtes en HTTP depuis Render.
+#     Si on redirigeait HTTP→HTTPS dans .htaccess, on créerait une
+#     boucle infinie de redirections (Apache → Render → Apache → ...).
+#
+#   [IMPORTANT] X-Forwarded-Proto est géré par index.php (pour les sessions
+#     cookie_secure) et non ici.
+#
+#   [CONSERVÉ] Tous les autres headers de sécurité (CSP, HSTS, etc.)
+#     HSTS est conservé : Render est forcément HTTPS, ce header est valide.
+#
+# =============================================================================
+
+Options -Indexes -MultiViews
+RewriteEngine On
+
+# =============================================================================
+# [1/4] EN-TÊTES DE SÉCURITÉ HTTP
+# (La redirection HTTPS est gérée par Render — pas ici)
+# =============================================================================
+<IfModule mod_headers.c>
+
+    # HSTS — Render étant toujours HTTPS, ce header est sûr
+    Header always set Strict-Transport-Security \
+        "max-age=31536000; includeSubDomains"
+
+    # Anti-Clickjacking
+    Header always set X-Frame-Options "DENY"
+
+    # Protection MIME sniffing
+    Header always set X-Content-Type-Options "nosniff"
+
+    # Politique de référent
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+    # Permissions API
+    Header always set Permissions-Policy \
+        "geolocation=(), microphone=(), camera=(), payment=(), usb=()"
+
+    # Content Security Policy
+    Header always set Content-Security-Policy \
+        "default-src 'self'; \
+         script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; \
+         style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; \
+         font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; \
+         img-src 'self' data: blob: https:; \
+         connect-src 'self'; \
+         frame-ancestors 'none'; \
+         base-uri 'self'; \
+         form-action 'self'; \
+         object-src 'none';"
+
+    # Masquer les informations serveur
+    Header unset X-Powered-By
+    Header unset Server
+    Header always unset X-Powered-By
+
+</IfModule>
+
+# =============================================================================
+# [2/4] PROTECTION DES FICHIERS SENSIBLES
+# =============================================================================
+
+<Files ".env">
+    Require all denied
+</Files>
+
+<Files ".htaccess">
+    Require all denied
+</Files>
+
+<FilesMatch "\.(sql|log|ini|conf|env|lock|yaml|yml|pem|key|crt|bak|sh|bash)$">
+    Require all denied
+</FilesMatch>
+
+<FilesMatch "(~|\.bak|\.old|\.tmp|\.swp|\.orig)$">
+    Require all denied
+</FilesMatch>
+
+# =============================================================================
+# [3/4] PERFORMANCE : COMPRESSION GZIP + CACHE NAVIGATEUR
+# =============================================================================
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css
+    AddOutputFilterByType DEFLATE application/javascript application/json
+    AddOutputFilterByType DEFLATE image/svg+xml application/xml
+    AddOutputFilterByType DEFLATE font/woff2 font/woff
+</IfModule>
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpeg        "access plus 1 month"
+    ExpiresByType image/png         "access plus 1 month"
+    ExpiresByType image/gif         "access plus 1 month"
+    ExpiresByType image/webp        "access plus 1 month"
+    ExpiresByType image/svg+xml     "access plus 1 month"
+    ExpiresByType text/css          "access plus 1 week"
+    ExpiresByType application/javascript "access plus 1 week"
+    ExpiresByType font/woff2        "access plus 3 months"
+    ExpiresByType image/x-icon      "access plus 1 year"
+</IfModule>
+
+# =============================================================================
+# [4/4] ROUTAGE — Front Controller (index.php)
+# =============================================================================
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+<LimitExcept GET POST HEAD OPTIONS>
+    Require all denied
+</LimitExcept>
