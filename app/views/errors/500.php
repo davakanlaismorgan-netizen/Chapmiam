@@ -1,0 +1,3 @@
+﻿<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>500 - Chap'miam</title>
+<style>body{font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f8f5f0}.box{text-align:center;padding:40px}.code{font-size:80px;font-weight:900;color:#e67e22;margin:0}.btn{display:inline-block;margin-top:20px;padding:10px 24px;background:#6b1a2a;color:#fff;text-decoration:none;border-radius:8px}</style>
+</head><body><div class="box"><div class="code">500</div><h2>Erreur serveur</h2><p>Une erreur inattendue s'est produite.</p><a class="btn" href="index.php">Accueil</a></div></body></html>
